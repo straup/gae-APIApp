@@ -1,0 +1,40 @@
+APIApp.py is a base class for Google AppEngine (GAE) applications to provide
+methods for a ("dirty" Flickr style) web based API. 
+
+For intents and purposes it doesn't really do anything except provide handy
+wrappers to send "method succeeded" and "method failed" responses.
+
+It does not provide hooks for third-party token-based API access (or
+"delegation" if you're feeling the need for to talk "shop").
+
+It follows the "dirty" Flickr way of doing things (a root "rsp" element,
+returning 200 OK for errors and so on) because it's what I know and, more
+importantly, I actually like it.
+
+Please feel free to subclass the "send_*" methods and others if this makes you
+cry.
+
+EXAMPLE (this really is all it does...)
+
+ from APIApp import APIApp
+
+ class MyAPI (APIApp) :
+
+      def __init__ (self) :
+
+      	  # the default format is 'xml'
+          # ...by default
+
+      	  default_format = 'json'
+
+          APIApp.__init__(self, default_format)
+
+      def get (self) :
+          
+          if self.request.get('name') :
+
+             out = {'hello' : name }                                      
+             self.api_ok(out)
+
+          else :
+             self.api_error(999, 'Self destruct!')
