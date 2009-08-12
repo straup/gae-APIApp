@@ -1,11 +1,14 @@
-import types
+from google.appengine.ext import webapp
 from django.utils import simplejson
 from django.utils import html
+import types
 
-class APIApp :
+class APIApp (webapp.RequestHandler) :
 
     def __init__ (self, default_format='xml') :
 
+        webapp.RequestHandler.__init__(self)
+        
         self.format = default_format
         self.valid_formats = ('xml', 'json')
 
@@ -27,6 +30,11 @@ class APIApp :
         self.send_rsp(out)
   
     def send_rsp (self, data) :
+
+        format = self.request.get('format')
+
+        if format != '' and format in self.valid_formats :
+            self.format = format
 
         rsp = self.serialize_rsp('rsp', data)
     
