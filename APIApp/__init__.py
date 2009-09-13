@@ -83,9 +83,9 @@ class APIApp (webapp.RequestHandler) :
             attrs = []
             children = []
             cdata = None
-        
+            
             for (foo, bar) in data.items() :
-
+                
                 if foo == '_content' :
                     cdata = bar
                     break
@@ -97,16 +97,19 @@ class APIApp (webapp.RequestHandler) :
                 if cdata :
                     xml += ">%s</%s>" % (self.prepare_xml_content(cdata), self.prepare_xml_content(root))
                     return xml
-        
+
             for pair in attrs :
                 xml += self.serialize_xml(pair[0], pair[1])
 
-            if len(children) == 0 :
+            if len(children) == 0 and not cdata :
                 xml += " />"
                 return xml
         
             xml += ">"
 
+            if cdata :
+                xml += self.prepare_xml_content(cdata)
+                
             for pair in children :
                 xml += self.serialize_xml(pair[0], pair[1])
                         
