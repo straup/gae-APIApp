@@ -2,16 +2,17 @@ from google.appengine.ext import webapp
 from django.utils import simplejson
 from django.utils import html
 import types
+import re
 
 class APIApp (webapp.RequestHandler) :
 
     def __init__ (self, default_format='xml') :
 
         webapp.RequestHandler.__init__(self)
-        
+
         self.format = default_format
         self.valid_formats = ('xml', 'json')
-
+        
     def ensure_args(self, required) :
     
         for r in required :
@@ -32,10 +33,10 @@ class APIApp (webapp.RequestHandler) :
     def send_rsp (self, data) :
 
         format = self.request.get('format')
-
+        
         if format != '' and format in self.valid_formats :
             self.format = format
-
+        
         rsp = self.serialize_rsp('rsp', data)
     
         if self.format == 'json' :
@@ -71,13 +72,16 @@ class APIApp (webapp.RequestHandler) :
     def serialize_json (self, root, data) :
         return simplejson.dumps({root : data})
     
-    def serialize_xml (self, root, data) :
-    
+    def serialize_xml (self, root, data, format=False, indent=0) :
+
         xml = ''
         ima = type(data)
 
         if ima == types.DictType :
 
+            if format : 
+                xml += "\t" * indent
+                
             xml += "<%s" % self.prepare_xml_content(root)
 
             attrs = []
@@ -89,13 +93,19 @@ class APIApp (webapp.RequestHandler) :
                 if foo == '_content' :
                     cdata = bar
                     break
+                
                 elif type(bar) != types.DictType and type(bar) != types.ListType :
                     attrs.append((foo, bar))
+                    
                 else :
                     children.append((foo, bar))
 
                 if cdata :
                     xml += ">%s</%s>" % (self.prepare_xml_content(cdata), self.prepare_xml_content(root))
+
+                    if format :
+                        xml += "\n"
+                        
                     return xml
 
             for pair in attrs :
@@ -103,23 +113,35 @@ class APIApp (webapp.RequestHandler) :
 
             if len(children) == 0 and not cdata :
                 xml += " />"
+
+                if format :
+                    xml += "\n"
+                    
                 return xml
         
             xml += ">"
-
+            
             if cdata :
                 xml += self.prepare_xml_content(cdata)
+            elif format :
+                xml += "\n"
                 
             for pair in children :
-                xml += self.serialize_xml(pair[0], pair[1])
-                        
+                xml += self.serialize_xml(pair[0], pair[1], format, (indent + 1))
+
+            if not cdata and format :
+                xml += "\t" * indent
+                
             xml += "</%s>" % self.prepare_xml_content(root)
-        
+
+            if format :
+                xml += "\n"
+                
         elif ima == types.ListType :
 
             for item in data :
-                xml += self.serialize_xml(root, item)
-
+                xml += self.serialize_xml(root, item, format, indent)
+                
         else :
 
             xml += " %s=\"%s\"" % (self.prepare_xml_content(root), self.prepare_xml_content(data))
@@ -129,4 +151,7 @@ class APIApp (webapp.RequestHandler) :
     # will this some day fuck up an element name? oh, probably...
     
     def prepare_xml_content (self, data) :
-        return html.escape(unicode(data))
+
+        # http://www.agapow.net/programming/python/unicode-and-html-entities
+        
+        return html.escape(data)
